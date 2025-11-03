@@ -1,9 +1,9 @@
 # Molly Guard RPM Package
 
-Molly-guard is a well known reboot protector. It was constructed for Debian
+*Molly-guard* is a well known reboot protector. It was constructed for Debian
 systems and not for RHEL/Centos.
 
-This is an RPM repackaging *molly-guard* using the `.deb` source
+This is an RPM repackaging of *molly-guard* using the `.deb` source
 package as a base. Some effort has been put in actually using RPM
 triggers and features in order to make it as much RHEL/like as possible.
 
@@ -55,6 +55,14 @@ It will actually just tell the debuild tool to write its results
 to a directory where rpmbuild will look for its artifacts.
 
 The constructed RPM file will end up in `rpm/RPMS`.
+
+## USE AT YOUR OWN RISK
+
+I have really tried making the install/uninstall parts safe. But you
+never know. And the code is free to read. So please read through this
+repository and perhaps also the originating `.deb` package source
+before using this package and/or packaging tool and the packaged
+product. Use it at your own risk.
 
 ## LICENSE
 
