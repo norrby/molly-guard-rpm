@@ -7,10 +7,10 @@ This is an RPM repackaging of *molly-guard* using the `.deb` source
 package as a base. Some effort has been put in actually using RPM
 triggers and features in order to make it as much RHEL/like as possible.
 
-The tough part of creating a working RPM package was to dodge all other
+A complicated part of creating a working RPM package was to dodge all other
 packages and upgrades. A `systemd` upgrade, for example, will replace the
 symlinked protection scripts by its own binaries. This spec file will
-reacto to that and immediately reinstate the molly-guard scripts and
+react to that and immediately reinstate the molly-guard scripts and
 links after the other package is finished.
 
 ## How to install
