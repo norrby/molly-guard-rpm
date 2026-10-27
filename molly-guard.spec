@@ -1,6 +1,6 @@
 Name: molly-guard
-Version: 0.8.5
-Release: 13
+Version: 0.8.6
+Release: 1
 Summary: protects machines from accidental shutdowns/reboots
 License: see /usr/share/doc/molly-guard/copyright
 Distribution: Debian
