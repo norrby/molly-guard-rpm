@@ -12,8 +12,10 @@ BuildArch: noarch
 %define _unpackaged_files_terminate_build 0
 
 %prep
-apt-get source %{NAME}
-sudo apt-get build-dep %{NAME}
+# Fetched from Debian's pool rather than with apt-get source, so the build
+# host's distribution does not decide which version ends up in the RPM.
+# molly-guard is a native Debian package: no -<revision> in the file name.
+dget -u https://deb.debian.org/debian/pool/main/m/molly-guard/%{name}_%{version}.dsc
 
 %build
 cd %{NAME}-%{VERSION}
