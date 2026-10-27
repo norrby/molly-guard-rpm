@@ -28,21 +28,18 @@ it then eill re-install the shutdown binaries/symlinks in `/usr/sbin`.
 
 ## Building the RPM
 
-The spec file in this directory relies on two facts:
-
-1. You are building the RPM on a machine that can use `apt` tools.
-2. On that machine you must also install the `rpmbuild` tools.
+The spec file in this directory relies on a Debian or Ubuntu build host
+with the `rpmbuild` tools installed.
 
 ### Preparation
 
-Enable sources for your deb distribution. Either use Synaptic and tick
-the checkbox or edit sources.list manually.
-
-Then edit the spec file to match the current version of the RPM. And
-make sure the debscripts are installed as well as the rpmbuild tools:
+Install the RPM tools, the Debian packaging tools and molly-guard's own
+build dependencies:
 ```sh
-sudo apt install devscripts rpm
+sudo apt install rpm devscripts debhelper docbook-xsl xsltproc
 ```
+The source is fetched from Debian's pool, so the build host's own
+distribution and its apt sources do not matter.
 
 ### RPM construction
 
