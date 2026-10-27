@@ -1,7 +1,7 @@
 # Molly Guard RPM Package
 
 *Molly-guard* is a well known reboot protector. It was constructed for Debian
-systems and not for RHEL/Centos.
+systems and not for RHEL, Rocky Linux, AlmaLinux or CentOS.
 
 This is an RPM repackaging of *molly-guard* using the `.deb` source
 package as a base. Some effort has been put in actually using RPM
@@ -12,6 +12,24 @@ packages and upgrades. A `systemd` upgrade, for example, will replace the
 symlinked protection scripts by its own binaries. This spec file will
 react to that and immediately reinstate the molly-guard scripts and
 links after the other package is finished.
+
+## Reboot hangs in dracut's debug shell
+
+With releases before 0.8.5-13, a `reboot` on a systemd host with dracut
+shut the OS down cleanly and then stopped like this, with the host waiting
+in a shell nobody can reach:
+
+```
+dracut Warning: reboot failed!
+...
+Dropping to debug shell.
+shutdown:/#
+```
+
+dracut copies `/usr/sbin/reboot`, which is the molly-guard wrapper, into
+its shutdown initramfs but not the renamed real command. Release 0.8.5-13
+and later ship a `dracut.conf.d` entry that brings it along and rebuild the
+initramfs on install. Upgrade the package and the next reboot works.
 
 ## How to install
 
