@@ -78,4 +78,8 @@ product. Use it at your own risk.
 
 ## LICENSE
 
-Use the spec file as you see fit as far as the GNU GPL 2.0 goes.
+The spec file and the rest of this repository are under the GNU GPL 2.0.
+
+molly-guard itself, which the RPM contains, is by its upstream authors and
+under the Artistic License 2.0. The RPM ships their copyright notice and
+the full license text in `/usr/share/licenses/molly-guard/copyright`.
