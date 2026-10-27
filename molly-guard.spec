@@ -1,6 +1,6 @@
 Name: molly-guard
 Version: 0.8.5
-Release: 12
+Release: 13
 Summary: protects machines from accidental shutdowns/reboots
 License: see /usr/share/doc/molly-guard/copyright
 Distribution: Debian
@@ -20,6 +20,19 @@ cd %{NAME}-%{VERSION}
 debuild -b -uc -us
 mkdir -p %buildroot
 mv debian/molly-guard/* %buildroot
+
+# dracut copies /usr/sbin/reboot (and friends) into the shutdown initramfs
+# (/run/initramfs) and runs it from there to finish a reboot. It follows the
+# molly-guard symlink but has no reason to bring the renamed original along,
+# so without this the wrapper finds no reboot.no-molly-guard, exits with
+# "E: not a regular file:" and dracut drops into its debug shell instead of
+# rebooting.
+mkdir -p %buildroot/etc/dracut.conf.d
+cat > %buildroot/etc/dracut.conf.d/molly-guard.conf <<'EOC'
+# Installed by the molly-guard RPM. The shutdown initramfs gets the molly-guard
+# wrapper as /usr/sbin/reboot etc.; give it the real commands too.
+install_items+=" /usr/sbin/reboot.no-molly-guard /usr/sbin/poweroff.no-molly-guard /usr/sbin/halt.no-molly-guard /usr/sbin/shutdown.no-molly-guard "
+EOC
 
 %pre
 set -e
@@ -55,6 +68,14 @@ for cmd in halt poweroff reboot shutdown coldreboot pm-hibernate pm-suspend pm-s
 done
 
 exit 0
+
+%posttrans
+# The initramfs of the running kernel is what dracut-shutdown.service restores
+# at shutdown, and it was built without the dracut.conf.d entry above. Rebuild
+# it so the next reboot works; later kernels pick the entry up on their own.
+if command -v dracut >/dev/null 2>&1 && [ -d /lib/modules/$(uname -r) ]; then
+    dracut -f --regenerate-all || :
+fi
 
 %postun
 set -e
@@ -94,6 +115,7 @@ You can bypass molly-guard by running those binaries directly.
 %dir "/etc/molly-guard/run.d/"
 %config "/etc/molly-guard/run.d/10-print-message"
 %config "/etc/molly-guard/run.d/30-query-hostname"
+%attr(0644,root,root) %config(noreplace) "/etc/dracut.conf.d/molly-guard.conf"
 %dir "/usr/lib/molly-guard/"
 "/usr/lib/molly-guard/molly-guard"
 %dir "/usr/share/doc/molly-guard/"
