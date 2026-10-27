@@ -13,19 +13,6 @@ symlinked protection scripts by its own binaries. This spec file will
 react to that and immediately reinstate the molly-guard scripts and
 links after the other package is finished.
 
-## dracut and the shutdown initramfs
-
-On RHEL-like systems dracut restores an initramfs into `/run/initramfs` at
-shutdown and, since dracut 057-120, finishes a reboot by running `reboot -f -n`
-from inside it. dracut copies `/usr/sbin/reboot` into that initramfs, which
-with molly-guard installed is the wrapper script, but not the renamed original
-it needs. The wrapper then fails with `E: not a regular file:` and dracut drops
-into its debug shell, leaving the machine hanging until it is power cycled.
-
-This RPM therefore ships `/etc/dracut.conf.d/molly-guard.conf`, which adds the
-`*.no-molly-guard` commands to every initramfs dracut builds, and rebuilds the
-existing initramfs images once on install so the running kernel is covered.
-
 ## How to install
 
 Molly guard may be installed like so:
