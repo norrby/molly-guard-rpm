@@ -46,30 +46,27 @@ it then eill re-install the shutdown binaries/symlinks in `/usr/sbin`.
 
 ## Building the RPM
 
-The spec file in this directory relies on a Debian or Ubuntu build host
-with the `rpmbuild` tools installed.
-
-### Preparation
-
-Install the RPM tools, the Debian packaging tools and molly-guard's own
-build dependencies:
+The spec file builds from molly-guard's source tarball with plain
+`rpmbuild`, fetching the tarball from Debian's pool. On Rocky Linux, RHEL
+or AlmaLinux:
 ```sh
-sudo apt install rpm devscripts debhelper docbook-xsl xsltproc
+sudo dnf install rpm-build make libxslt docbook-style-xsl docbook-dtds
+mkdir -p ~/rpmbuild/SOURCES
+rpmbuild -ba --undefine=_disable_source_fetch molly-guard.spec
 ```
-The source is fetched from Debian's pool, so the build host's own
-distribution and its apt sources do not matter.
+The RPM ends up in `~/rpmbuild/RPMS/noarch`. `rpmbuild` does not create
+`SOURCES` itself, and without it the download fails.
 
-### RPM construction
-
-Then the spec file will do all the work (leaving the actual work
-with building and making docs to the debuild tool).
+It also builds on Debian or Ubuntu, where the RHEL package names in
+`BuildRequires` are unknown to rpm:
 ```sh
-rpmbuild -v --define "_topdir `pwd`/rpm" -ba molly-guard.spec
+sudo apt install rpm make xsltproc docbook-xsl docbook-xml
+mkdir -p ~/rpmbuild/SOURCES
+rpmbuild -ba --nodeps --undefine=_disable_source_fetch molly-guard.spec
 ```
-It will actually just tell the debuild tool to write its results
-to a directory where rpmbuild will look for its artifacts.
 
-The constructed RPM file will end up in `rpm/RPMS`.
+To package a new upstream version, change `Version`, reset `Release` to 1
+and add a `%changelog` entry.
 
 ## USE AT YOUR OWN RISK
 

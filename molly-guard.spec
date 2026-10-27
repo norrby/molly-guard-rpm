@@ -1,27 +1,51 @@
 Name: molly-guard
 Version: 0.8.6
-Release: 1
-Summary: protects machines from accidental shutdowns/reboots
-License: see /usr/share/doc/molly-guard/copyright
-Distribution: Debian
-Group: Converted/admin
-Requires: /usr/sbin/reboot
+Release: 2
+Summary: Protects machines from accidental shutdowns and reboots
+License: Artistic-2.0
+URL: https://salsa.debian.org/debian/molly-guard
+# molly-guard is a native Debian package, so the tarball is the whole source.
+Source0: https://deb.debian.org/debian/pool/main/m/molly-guard/molly-guard_%{version}.tar.xz
 BuildArch: noarch
+BuildRequires: make sed libxslt docbook-style-xsl docbook-dtds
+Requires: /usr/sbin/reboot
+# The wrapper finds its checks with run-parts. Without it the loop is empty
+# and every reboot goes through unasked. Provided by crontabs on RHEL.
+Requires: /usr/bin/run-parts
 
-%define _rpmfilename %%{NAME}-%%{VERSION}-%%{RELEASE}.%%{ARCH}.rpm
-%define _unpackaged_files_terminate_build 0
+%description
+The package installs a shell script that overrides the existing
+shutdown/reboot/halt/poweroff/coldreboot/pm-hibernate/pm-suspend* commands
+and first runs a set of scripts, which all have to exit successfully,
+before molly-guard invokes the real command.
+
+One of the scripts checks for existing SSH sessions. If any of the four
+commands are called interactively over an SSH session, the shell script
+prompts you to enter the name of the host you wish to shut down. This should
+adequately prevent you from accidental shutdowns and reboots.
+
+molly-guard renames the real binaries to /usr/sbin/<command>.no-molly-guard.
+You can bypass molly-guard by running those binaries directly.
 
 %prep
-# Fetched from Debian's pool rather than with apt-get source, so the build
-# host's distribution does not decide which version ends up in the RPM.
-# molly-guard is a native Debian package: no -<revision> in the file name.
-dget -u https://deb.debian.org/debian/pool/main/m/molly-guard/%{name}_%{version}.dsc
+%setup -q
 
 %build
-cd %{NAME}-%{VERSION}
-debuild -b -uc -us
-mkdir -p %buildroot
-mv debian/molly-guard/* %buildroot
+# The Makefile hard-codes Debian's path to the DocBook stylesheet. The
+# canonical URL resolves offline through the XML catalog on both Debian and
+# RHEL, so the man page builds on either.
+make shutdown molly-guard.8 \
+    DB2MAN=http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl
+
+%install
+# Not "make install": it creates the /usr/sbin symlinks, which belong to
+# systemd and are set up by the scriptlets below instead, and it runs
+# install -o root, which needs a root build.
+install -D -m 0755 shutdown %{buildroot}%{_prefix}/lib/molly-guard/molly-guard
+install -D -m 0644 rc %{buildroot}%{_sysconfdir}/molly-guard/rc
+install -D -m 0755 -t %{buildroot}%{_sysconfdir}/molly-guard/run.d run.d/*
+install -d -m 0755 %{buildroot}%{_sysconfdir}/molly-guard/messages.d
+install -D -m 0644 molly-guard.8 %{buildroot}%{_mandir}/man8/molly-guard.8
 
 # dracut copies /usr/sbin/reboot (and friends) into the shutdown initramfs
 # (/run/initramfs) and runs it from there to finish a reboot. It follows the
@@ -29,8 +53,8 @@ mv debian/molly-guard/* %buildroot
 # so without this the wrapper finds no reboot.no-molly-guard, exits with
 # "E: not a regular file:" and dracut drops into its debug shell instead of
 # rebooting.
-mkdir -p %buildroot/etc/dracut.conf.d
-cat > %buildroot/etc/dracut.conf.d/molly-guard.conf <<'EOC'
+install -d -m 0755 %{buildroot}%{_sysconfdir}/dracut.conf.d
+cat > %{buildroot}%{_sysconfdir}/dracut.conf.d/molly-guard.conf <<'EOC'
 # Installed by the molly-guard RPM. The shutdown initramfs gets the molly-guard
 # wrapper as /usr/sbin/reboot etc.; give it the real commands too.
 install_items+=" /usr/sbin/reboot.no-molly-guard /usr/sbin/poweroff.no-molly-guard /usr/sbin/halt.no-molly-guard /usr/sbin/shutdown.no-molly-guard "
@@ -76,7 +100,8 @@ exit 0
 # at shutdown, and it was built without the dracut.conf.d entry above. Rebuild
 # it so the next reboot works; later kernels pick the entry up on their own.
 if command -v dracut >/dev/null 2>&1 && [ -d /lib/modules/$(uname -r) ]; then
-    dracut -f --regenerate-all || :
+    dracut -f --regenerate-all ||
+        echo "molly-guard: dracut failed, the next reboot may hang in dracut's debug shell" >&2
 fi
 
 %postun
@@ -95,35 +120,29 @@ done
 exit 0
 
 
-%description
-The package installs a shell script that overrides the existing
-shutdown/reboot/halt/poweroff/coldreboot/pm-hibernate/pm-suspend* commands
-and first runs a set of scripts, which all have to exit successfully,
-before molly-guard invokes the real command.
-
-One of the scripts checks for existing SSH sessions. If any of the four
-commands are called interactively over an SSH session, the shell script
-prompts you to enter the name of the host you wish to shut down. This should
-adequately prevent you from accidental shutdowns and reboots.
-
-molly-guard renames the real binaries to /usr/sbin/<command>.no-molly-guard.
-You can bypass molly-guard by running those binaries directly.
-
 %files
-%defattr(0755,root,root)
-%dir "/etc/molly-guard/"
-%dir "/etc/molly-guard/messages.d/"
-%config "/etc/molly-guard/rc"
-%dir "/etc/molly-guard/run.d/"
-%config "/etc/molly-guard/run.d/10-print-message"
-%config "/etc/molly-guard/run.d/30-query-hostname"
-%attr(0644,root,root) %config(noreplace) "/etc/dracut.conf.d/molly-guard.conf"
-%dir "/usr/lib/molly-guard/"
-"/usr/lib/molly-guard/molly-guard"
-%dir "/usr/share/doc/molly-guard/"
-"/usr/share/doc/molly-guard/changelog.gz"
-"/usr/share/doc/molly-guard/copyright"
-%dir "/usr/share/lintian/"
-%dir "/usr/share/lintian/overrides/"
-"/usr/share/lintian/overrides/molly-guard"
-"/usr/share/man/man8/molly-guard.8.gz"
+%license debian/copyright
+%doc debian/changelog
+%dir %{_sysconfdir}/molly-guard
+%dir %{_sysconfdir}/molly-guard/messages.d
+%dir %{_sysconfdir}/molly-guard/run.d
+%config(noreplace) %{_sysconfdir}/molly-guard/rc
+%config(noreplace) %{_sysconfdir}/molly-guard/run.d/10-print-message
+%config(noreplace) %{_sysconfdir}/molly-guard/run.d/30-query-hostname
+%config(noreplace) %{_sysconfdir}/dracut.conf.d/molly-guard.conf
+%{_prefix}/lib/molly-guard
+%{_mandir}/man8/molly-guard.8*
+
+%changelog
+* Tue Oct 27 2026 M Norrby <norrby@lysator.liu.se> - 0.8.6-2
+- Build from the source tarball with rpmbuild alone, no Debian tooling
+- Keep local edits to the configuration across upgrades
+- Warn when the initramfs rebuild fails
+- Require run-parts, without which the checks were silently skipped
+
+* Tue Oct 27 2026 M Norrby <norrby@lysator.liu.se> - 0.8.6-1
+- Update to molly-guard 0.8.6, packaging changes only
+
+* Tue Oct 27 2026 M Norrby <norrby@lysator.liu.se> - 0.8.5-13
+- Bring the real reboot commands into dracut's shutdown initramfs, so a
+  reboot no longer hangs in dracut's debug shell (Hampus Rosenquist)
